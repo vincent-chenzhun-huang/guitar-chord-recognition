@@ -1,0 +1,4 @@
+train: dataset/yolo_hand_data/images/train
+val: dataset/yolo_hand_data/images/validation
+nc: 1
+names: ['hand']
