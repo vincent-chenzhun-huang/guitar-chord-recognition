@@ -1,0 +1,4 @@
+train: guitar-chord-recognition/dataset/yolo_hand_data_smaller_with_margin/images/train
+val: guitar-chord-recognition/dataset/yolo_hand_data_smaller_with_margin/images/validation
+nc: 1
+names: ['hand']
