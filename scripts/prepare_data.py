@@ -7,18 +7,21 @@ import matplotlib.pyplot as plt
 import cv2
 import mediapipe as mp
 from google.protobuf.json_format import MessageToDict
-
+import os
+from config.settings import DEFAULT_DATASET_PATH, DEFAULT_DATA_LIST_PATH
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
 
-def open_camera(capture_rate=50):
-    cap = cv.VideoCapture(0)
+def open_camera(capture_mode=False, capture_rate=50,
+                output_path='/Users/vincenthuang/Development/guitar-chord-recognition/data/raw_images', index=206):
+    cap = cv.VideoCapture(1)
     if not cap.isOpened():
         print('Cannot open camera')
     else:
+        count = 0
         while True:
             ret, frame = cap.read()
 
@@ -28,7 +31,21 @@ def open_camera(capture_rate=50):
             # rotated_image = rotate_image(frame, top_orientation_in_degrees)
             # annotated_with_hands = get_hand_rectangle(cv2.flip(rotated_image, 1))
             annotated_with_hands = single_frame_operation(frame)
-            current_frame = cv.resize(frame, (300, 300)) if not np.any(annotated_with_hands) else annotated_with_hands
+            # current_frame = cv.resize(frame, (300, 300)) if not np.any(annotated_with_hands) else annotated_with_hands
+            if np.any(annotated_with_hands):
+                # if a hand is found
+                count = (count + 1) % capture_rate
+                current_frame = annotated_with_hands
+                if count == capture_rate - 1 and capture_mode:
+                    cv2.imwrite(f'{output_path}/image{index}.jpg', current_frame)
+                    index += 1
+                    print('------------------- captured one image --------------------')
+                elif count == capture_rate - 1:
+                    print('----------------------- not capturing --------------------------')
+                # print(count)
+            else:
+                # current_frame = cv.resize(frame, (300, 300))
+                current_frame = frame
             cv.imshow('frame', current_frame)
             if cv.waitKey(1) == ord('q'):
                 break
@@ -64,8 +81,8 @@ def single_frame_operation(img, mirror=False, output_size=300):
         rec_p2 = (rectangle['bottom right']['x'], rectangle['bottom right']['y'])
         cv2.rectangle(annotated_with_hands, rec_p1, rec_p2, (0, 244, 0))
         hand_rectangle = annotated_with_hands[rec_p1[1]: rec_p2[1], rec_p1[0]: rec_p2[0]]
-        hand_rectangle = pad_to_square(hand_rectangle)
-        hand_rectangle = cv2.resize(hand_rectangle, (output_size, output_size), interpolation=cv2.INTER_AREA)
+        # hand_rectangle = pad_to_square(hand_rectangle)
+        # hand_rectangle = cv2.resize(hand_rectangle, (output_size, output_size), interpolation=cv2.INTER_AREA)
         print(hand_rectangle.shape)
     else:
         hand_rectangle = np.zeros(img.shape)
@@ -77,7 +94,7 @@ def get_string_orientation(frame):
     edges = cv.Canny(frame, 100, 150, None, 3)
 
     lines = cv.HoughLinesP(edges, 1, np.pi / 180, 50, None, 50, 10)
-    cdst = cv.cvtColor(edges, cv.COLOR_GRAY2BGR)
+    # cdst = cv.cvtColor(edges, cv.COLOR_GRAY2BGR)
 
     # for each line, get their orientation
     orientation = np.arctan(np.float64(lines[:, :, 3] - lines[:, :, 1]) / np.float64(lines[:, :, 2] - lines[:, :, 0]))
@@ -97,10 +114,10 @@ def get_string_orientation(frame):
     top_orientations = orientation[line_filter]
 
     # hist, bins = np.histogram(orientation, bins=20)
-    if top_lines is not None:
-        for i in range(0, len(top_lines)):
-            l = top_lines[i][0]
-            cv.line(cdst, (l[0], l[1]), (l[2], l[3]), (0, 0, 255), 3, cv.LINE_AA)
+    # if top_lines is not None:
+    #     for i in range(0, len(top_lines)):
+    #         l = top_lines[i][0]
+    # cv.line(cdst, (l[0], l[1]), (l[2], l[3]), (0, 0, 255), 3, cv.LINE_AA)
 
     # get the average value of the top orientation
     return np.mean(top_orientations)
@@ -165,11 +182,11 @@ def crop_hand(image_data, hand, margin=0.2):
     return {
         'bottom right': {
             'x': img_width - 1 - 0,
-            'y': max(y_rec_down + round(box_height * margin), box_height - 1)
+            'y': max(y_rec_down + round(box_height * margin * 3), box_height - 1)
         },
         'top left': {
             'x': img_width - 1 - x_rec_right - round(img_width * margin),
-            'y': max(y_rec_up - round(box_height * margin * 2), 0)
+            'y': max(y_rec_up - round(box_height * margin * 3), 0)
         }
     }
 
@@ -190,6 +207,38 @@ def pad_to_square(cropped_img):
     return new_im
 
 
+def split_train_val_test(first_split=0.7, second_split=0.5):
+    all_image_numbers = [int(file.replace('image', '').replace('.jpg', '')) for file in os.listdir(DEFAULT_DATASET_PATH)
+                         if
+                         file.endswith('.jpg')]
+    np.random.seed(0)
+    np.random.shuffle(all_image_numbers)
+    image_numbers_split = np.split(all_image_numbers,
+                                   [round(.7 * len(all_image_numbers)), round(0.85 * len(all_image_numbers)),
+                                    round(1 * len(all_image_numbers))])
+
+    add_to_txt(sorted(image_numbers_split[0]))  # add to training set
+    add_to_txt(sorted(image_numbers_split[1]))  # add to validation set
+
+
+def add_to_txt(image_numbers, prefix='data/2', list_type='train', output=DEFAULT_DATA_LIST_PATH):
+    content = ''
+    for image_num in image_numbers:
+        file_name_base = f'image{image_num}'
+        suffix_list = ['.jpg', '_fingers.csv', '_frets.csv', '_strings.csv', '_hand.csv', '_yolo.csv']
+
+        for suffix in suffix_list:
+            file_name = f'{file_name_base}{suffix}'
+            if os.path.isfile(f'{DEFAULT_DATASET_PATH}/{file_name}'):
+                # if the file exists, add the file to the list
+                print('added to content')
+                content += f'{prefix}/{file_name}\n'
+    # write to output
+    with open(f'{output}/{list_type}.txt', 'w+') as output_file:
+        output_file.write(content)
+
+
 if __name__ == '__main__':
-    # open_camera()
-    single_image('/Users/vincenthuang/Development/guitar-chord-recognition/dataset/test/image1.jpg')
+    # open_camera(capture_mode=True, index=248)
+    # single_image('/Users/vincenthuang/Development/guitar-chord-recognition/dataset/test/image1.jpg')
+    split_train_val_test()
