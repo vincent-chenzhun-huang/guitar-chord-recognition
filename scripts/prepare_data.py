@@ -102,6 +102,11 @@ def get_string_orientation(frame):
     orientation = orientation.reshape(orientation.shape[0], )
 
     values, bins, patches = plt.hist(orientation, density=True, bins=60)
+    plt.title('Orientation Distributions of Detected Hough Lines')
+    plt.xlabel('Orientations (in radians)')
+    plt.ylabel('Frequency')
+    plt.show()
+
 
     # get the top two orientations
     indices = np.argsort(values)[::-1]
@@ -121,7 +126,6 @@ def get_string_orientation(frame):
 
     # get the average value of the top orientation
     return np.mean(top_orientations)
-    # plt.show()
     # return cv.flip(frame, 1)
 
 
@@ -218,7 +222,8 @@ def split_train_val_test(first_split=0.7, second_split=0.5):
                                     round(1 * len(all_image_numbers))])
 
     add_to_txt(sorted(image_numbers_split[0]))  # add to training set
-    add_to_txt(sorted(image_numbers_split[1]))  # add to validation set
+    add_to_txt(sorted(image_numbers_split[1]), list_type='val')  # add to validation set
+    add_to_txt(sorted(image_numbers_split[2]), list_type='test')  # add to test set
 
 
 def add_to_txt(image_numbers, prefix='data/2', list_type='train', output=DEFAULT_DATA_LIST_PATH):
@@ -240,5 +245,5 @@ def add_to_txt(image_numbers, prefix='data/2', list_type='train', output=DEFAULT
 
 if __name__ == '__main__':
     # open_camera(capture_mode=True, index=248)
-    # single_image('/Users/vincenthuang/Development/guitar-chord-recognition/dataset/test/image1.jpg')
-    split_train_val_test()
+    single_image('/Users/vincenthuang/Development/guitar-chord-recognition/data/2/image10.jpg')
+    # split_train_val_test()

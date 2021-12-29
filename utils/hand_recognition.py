@@ -3,7 +3,7 @@ import mediapipe as mp
 from google.protobuf.json_format import MessageToDict
 from scripts.data_preparation import crop_hand
 from pathlib import PurePath, Path
-from config.settings import DEFAULT_DATASET_PATH, DEFAULT_IMAGES_PATH, DEFAULT_LABELS_PATH
+from config.settings import DEFAULT_DATASET_PATH
 import os
 
 mp_drawing = mp.solutions.drawing_utils

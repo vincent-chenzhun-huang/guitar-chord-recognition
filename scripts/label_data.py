@@ -75,7 +75,7 @@ def label_data(file_name, input_path=DEFAULT_DATASET_PATH, output_path=DEFAULT_D
         print('------------write to csv--------------')
         # json.dump(finger_label, label_csv, indent=4)
         for point in points:
-            label_csv.write(f'{point["x"]}, {point["y"]}\n')
+            label_csv.write(f'{point["x"]},{point["y"]}\n')
 
     cv2.destroyAllWindows()
 
